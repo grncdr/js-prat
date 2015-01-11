@@ -4,106 +4,84 @@ Easy peasy promise-aware transform streams.
 
 ## Example
 
-First we'll create a source stream emits Promises for the numbers 0 to 9:
+First we'll write a function that returns a promise for a cities local weather:
 
 ```javascript
-var Promise = require('bluebird')
-var from = require('from')
-var reduce = require('stream-reduce')
+var questor = require('questor');
+
+var baseUri ='http://api.openweathermap.org/data/2.5/weather?units=metric&q=';
+
+function getWeather (city) {
+  var uri = baseUri + encodeURIComponent(city);
+  return questor(uri).get('body').then(JSON.parse);
+}
+```
+
+Then we'll pipe some data through it:
+
+```javascript
 var prat = require('./')
+var from = require('from')
 
-var source = from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(Promise.resolve))
+var cities = [
+  'Berlin,de',
+  'Victoria,ca',
+  'Las Palmas de Gran Canaria',
+  'Tokyo',
+  'Paris',
+  'Calgary',
+  'Phoenix',
+  'Johannesburg'
+]
+
+//var weather = from(cities).pipe(prat(getWeather));
 ```
 
-Then we can transform the stream of promises using `prat`:
+By default each item will be processed serially, you can also control maximum number of concurrent operations by an options object as the first argument to `prat`:
 
 ```javascript
-var assert = require('assert')
-var through = require('through2')
+var weather = from(cities).pipe(prat({concurrency: 5}, getWeather));
+```
 
-function double (n) { return n * 2 }
+`prat` maintains the ordering of it's inputs even when processing multiple operations concurrently. It will also work just fine with synchronous functions:
 
-function sumPromises () {
-  var total = 0
+```javascript
+var concat = require('concat-stream');
+var namesAndDescriptions = weather.pipe(prat(function (w) {
+  return [w.name, w.main && w.main.temp, w.weather[0].description];
+}));
+```
 
-  return through.obj(function (promisedNumber, _, next) {
-    promisedNumber.then(function (n) {
-      total += n
-      next()
-    }, next)
-  }, function (done) {
-    this.push(total)
-    done()
+Finally, we'll log out our results:
+
+```javascript
+namesAndDescriptions.on('data', console.log);
+```
+
+## Convenience methods
+
+## Using `.map` and `prat.ify`
+
+Transform streams created by `prat` have some convenience methods:
+
+ * `prat.ify(stream)` is equivalent to `stream.pipe(prat(identify))`.
+ * `map([limit,] fn)` is equivalent to `pipe(prat(fn))`.
+ * `reduce(memo, fn)` takes an initial value and returns a promise for the result of repeatedly calling `memo = fn(memo, chunk)` for each chunk in the stream.
+ * `tap` is the same as map, but only inspects objects instead of replacing them.
+
+Using the above we could rewrite our weather example like this:
+
+```javascript
+var ws = prat.ify(from(cities)).map(getWeather).reduce({}, function (report, w) {
+    report[w.name] = w.main && Math.round(w.main.temp) + '° C, ' + w.weather[0].description
+    return report;
   })
-}
-
-var exampleCounter = 0
-function checkTotal (n) {
-  assert.equal(n, 24)
-  console.log('ok - example ' + (++exampleCounter))
-}
-
-source
-  .pipe(prat(double))
-  .pipe(prat(Math.sqrt))
-  .pipe(prat(Math.floor))
-  .pipe(sumPromises())
-  .on('data', checkTotal)
+  .then(console.log);
 ```
 
-## Using `.then` and `prat.ify`
+## Errors
 
-Transform streams created by `prat` have a `.then(fn)` method that is equivalent
-to `.pipe(prat(fn))`: for each promise `p` in the stream, a new promise is
-created using `p.then(fn)`.
-
-This greatly simplifies stacking up transform streams as the transform functions
-don't need to be aware that they are part of a stream at all.
-
-```javascript
-source.pipe(prat(double))
-  .then(Math.sqrt)
-  .then(Math.floor)
-  .pipe(sumPromises())
-  .on('data', checkTotal)
-```
-
-That first `.pipe` call can also be avoided by using `prat.ify`:
-
-```javascript
-prat.ify(source)
-  .then(double)
-  .then(Math.sqrt)
-  .then(Math.floor)
-  .pipe(sumPromises())
-  .on('data', checkTotal)
-```
-
-Finally, being able to return a new Promise from `fn` means you can use any
-promise-returning function just as easily:
-
-```javascript
-var EnterpriseIntegerDoublingServer = {
-  double: function (n) {
-    return new Promise(function (resolve) {
-      setTimeout(resolve.bind(null, n * 2), 500)
-    })
-  }
-}
-
-prat.ify(source)
-  .then(EnterpriseIntegerDoublingServer.double)
-  .then(Math.sqrt)
-  .then(Math.floor)
-  .pipe(sumPromises())
-  .on('data', checkTotal)
-```
-
-In the above example, all the calls to the `EnterpriseIntegerDoublingServer` are
-performed in parallel, because the promises are not actually resolved until
-`sumPromises()`. If you want to control this behaviour, you can use
-[`resolve-promise-stream`](http://npm.im/resolve-promise-stream) to wait on each
-individual promise in the stream before continuing.
+Thrown errors and promise rejections will be emitted as normal `'error'` events from the stream. As with all node streams, `'error'` events are *not* forwarded when you pipe to another stream, and unhandled `'error'` events will crash your process.
 
 ## License
 
