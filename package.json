@@ -12,15 +12,19 @@
     "stream-reduce": "^1.0.3"
   },
   "devDependencies": {
+    "blue-tape": "^0.1.8",
     "bluebird": "~1.1.0",
-    "from": "~0.1.3",
+    "from2": "^1.3.0",
+    "istanbul": "^0.3.5",
     "markdown-code-blocks": "0.0.1",
-    "questor": "^1.0.0",
-    "tape": "~2.3.2"
+    "ned": "^1.1.1",
+    "questor": "^1.0.0"
   },
   "scripts": {
-    "test": "markdown-code-blocks -t javascript < README.md | node",
-    "debug": "markdown-code-blocks -t javascript < README.md > debug-test.js && node debug debug-test.js"
+    "readme": "npm run compile-readme && node readme.js",
+    "debug-readme": "npm run compile-readme && node debug readme.js",
+    "compile-readme": "markdown-code-blocks -t javascript < README.md | ned -S \"'$npm_package_name'\" \"'./'\" > readme.js",
+    "test": "npm run compile-readme && istanbul cover test.js"
   },
   "repository": {
     "type": "git",

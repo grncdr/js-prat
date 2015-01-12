@@ -20,8 +20,8 @@ function getWeather (city) {
 Then we'll pipe some data through it:
 
 ```javascript
-var prat = require('./')
-var from = require('from')
+var prat = require('prat')
+var from = require('from2')
 
 var cities = [
   'Berlin,de',

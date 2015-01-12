@@ -3,6 +3,7 @@ var Transform = require('readable-stream').Transform;
 var Bluebird = require('bluebird');
 var reduce = require('stream-reduce');
 
+/* istanbul ignore next */
 var STATE = typeof Symbol === 'undefined' ? '@@prat' : Symbol('prat');
 
 module.exports = Prat;
@@ -39,6 +40,7 @@ Prat.ctor = function (defaults, fn) {
     if (!(this instanceof Transform)) {
       return new Transform(opts);
     }
+    opts = opts || {}
     for (var k in defaults) if (!(k in opts)) opts[k] = defaults[k];
     Prat.call(this, opts);
   }
@@ -49,10 +51,9 @@ Prat.ctor = function (defaults, fn) {
 }
 
 Prat.ify = function pratify (stream) {
-  stream.map = function (fn) {
-    return stream.pipe(Prat(fn));
-  };
-  return stream;
+  return stream.pipe(new Prat(function (x) {
+    return x;
+  }));
 };
 
 Prat.prototype.map = function (limit, fn) {
@@ -74,15 +75,6 @@ Prat.prototype.reduce = function (init, fn) {
       .on('data', resolve)
       .on('error', reject);
   });
-};
-
-Prat.prototype['@@iterator'] = function () {
-}
-
-Prat.prototype.tap = function (limit, fn) {
-  return this.pipe(new Prat(limit, function (item) {
-    return Bluebird.resolve(fn(item)).return(item);
-  }));
 };
 
 Prat.prototype._transform = function (value, encoding, callback) {
@@ -142,34 +134,3 @@ Prat.prototype._flush = function (cb) {
     cb(err);
   }
 };
-
-function onSuccess (stream, queue, promise, value) {
-  var i = queue.indexOf(promise);
-  if (i === 0) {
-    // Front of the queue, push value immediately and exit
-    return pushValue();
-  }
-
-  // Wait for preceding promise before pushing
-  queue[i] = queue[i - 1].then(function () {
-    var i = queue.indexOf(promise)
-    if (i < 0) {
-      return;
-    }
-    if (i === 0) {
-      pushValue();
-    } else {
-      queue[i] = queue[i - 1].then(pushValue)
-    }
-  });
-
-  function pushValue () {
-    assert(promise === queue[0],
-           'Can only proceed when promise is at front of queue');
-    queue.shift();
-    stream.push(value);
-    if (!queue.length) {
-      stream.emit('__queue_cleared__');
-    }
-  }
-}
