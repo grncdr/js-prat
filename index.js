@@ -128,7 +128,6 @@ Prat.prototype._flush = function (cb) {
   }
 
   function cleanup (err) {
-    self[STATE] = null;
     cb(err);
   }
 };
