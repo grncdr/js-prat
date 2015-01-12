@@ -1,5 +1,7 @@
 # prat
 
+![Build Status](https://travis-ci.org/grncdr/js-prat.svg?branch=master)
+
 Easy peasy promise-aware transform streams.
 
 ## Example
