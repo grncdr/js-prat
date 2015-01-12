@@ -7,7 +7,6 @@ var reduce = require('stream-reduce');
 var STATE = typeof Symbol === 'undefined' ? '@@prat' : Symbol('prat');
 
 module.exports = Prat;
-var ID = 0
 
 inherits(Prat, Transform);
 function Prat (opts, fn) {
@@ -21,7 +20,6 @@ function Prat (opts, fn) {
   Transform.call(this, {highWaterMark: opts.highWaterMark, objectMode: true});
 
   this[STATE] = {
-    id: ++ID,
     flushCallback: false,
     promises: [],
     concurrency: opts.concurrency,
