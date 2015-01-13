@@ -36,10 +36,10 @@ var cities = [
   'Johannesburg'
 ]
 
-//var weather = from(cities).pipe(prat(getWeather));
+var weather = from(cities).pipe(prat(getWeather));
 ```
 
-By default each item will be processed serially, you can also control maximum number of concurrent operations by an options object as the first argument to `prat`:
+By default each item will be processed serially, you can also control maximum number of concurrent operations by passing an options object as the first argument to `prat`:
 
 ```javascript
 var weather = from(cities).pipe(prat({concurrency: 5}, getWeather));
