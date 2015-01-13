@@ -62,8 +62,6 @@ namesAndDescriptions.on('data', console.log);
 
 ## Convenience methods
 
-## Using `.map` and `prat.ify`
-
 Transform streams created by `prat` have some convenience methods:
 
  * `prat.ify(stream)` is equivalent to `stream.pipe(prat(identify))`.
