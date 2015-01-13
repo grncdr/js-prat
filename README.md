@@ -64,7 +64,7 @@ namesAndDescriptions.on('data', console.log);
 
 Transform streams created by `prat` have some convenience methods:
 
- * `prat.ify(stream)` is equivalent to `stream.pipe(prat(identify))`.
+ * `prat.ify(stream)` is equivalent to `stream.pipe(prat(identity))`.
  * `map([limit,] fn)` is equivalent to `pipe(prat(fn))`.
  * `reduce(memo, fn)` takes an initial value and returns a promise for the result of repeatedly calling `memo = fn(memo, chunk)` for each chunk in the stream.
  * `tap` is the same as map, but only inspects objects instead of replacing them.
