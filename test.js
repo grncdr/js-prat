@@ -30,6 +30,20 @@ test('Async transform', function (t) {
     });
 });
 
+test('Dropping', function (t) {
+  return from.obj([1, 2, 3, 4, 5, 6])
+    .pipe(prat(function (n) {
+      if (n % 3 === 0) {
+        return n;
+      }
+    }))
+    .reduce([], append)
+    .then(function (result) {
+      t.deepEqual(result, [3, 6]);
+    });
+});
+
+
 test('Async concurrency', function (t) {
   var delay = 300;
   return from.obj([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).pipe(prat({concurrency: 3}, function (n) {
@@ -65,6 +79,17 @@ test('prat.ify', function (t) {
   }).then(function (total) {
     t.equal(total, 6);
   });
+});
+
+test('Prat#filter', function (t) {
+  return prat.ify(from.obj([1, 2, 3, 4, 5]))
+    .filter(function (n) {
+      return n % 2 === 0;
+    })
+    .reduce([], append)
+    .then(function (result) {
+      t.equal(result, [2, 4]);
+    });
 });
 
 test('prat.ctor', function (t) {

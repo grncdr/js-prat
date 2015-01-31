@@ -15,7 +15,7 @@ function Prat (opts, fn) {
   }
   if (typeof opts === 'function') {
     fn = opts;
-    opts = {concurrency: 1}
+    opts = {concurrency: 1};
   }
   Transform.call(this, {highWaterMark: opts.highWaterMark, objectMode: true});
 
@@ -29,8 +29,8 @@ function Prat (opts, fn) {
 
 Prat.ctor = function (defaults, fn) {
   if (typeof defaults === 'function') {
-    fn = defaults
-    defaults = {}
+    fn = defaults;
+    defaults = {};
   }
 
   inherits(Transform, Prat);
@@ -38,7 +38,7 @@ Prat.ctor = function (defaults, fn) {
     if (!(this instanceof Transform)) {
       return new Transform(opts);
     }
-    opts = opts || {}
+    opts = opts || {};
     for (var k in defaults) if (!(k in opts)) opts[k] = defaults[k];
     Prat.call(this, opts);
   }
@@ -54,8 +54,24 @@ Prat.ify = function pratify (stream) {
   }));
 };
 
-Prat.prototype.map = function (limit, fn) {
-  return this.pipe(new Prat(limit, fn));
+Prat.prototype.map = function (opts, fn) {
+  return this.pipe(new Prat(opts, fn));
+};
+
+Prat.prototype.filter = function (opts, fn) {
+  if (typeof opts === 'function') {
+    fn = opts;
+    opts = {};
+  }
+
+  return this.map(opts, function (item) {
+    return Bluebird.resolve(fn(item)).then(function (keep) {
+      console.log('keep', keep, 'item', item);
+      if (keep) {
+        return item;
+      }
+    });
+  });
 };
 
 Prat.prototype.reduce = function (init, fn) {
@@ -106,7 +122,10 @@ function handleSettled (stream) {
     var promise = promises.shift();
 
     if (promise.isFulfilled()) {
-      stream.push(promise.value());
+      var value = promise.value();
+      if (void(0) !== value) {
+        stream.push(value);
+      }
     } else {
       stream.emit('error', promise.reason());
     }
