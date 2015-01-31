@@ -88,7 +88,7 @@ test('Prat#filter', function (t) {
     })
     .reduce([], append)
     .then(function (result) {
-      t.equal(result, [2, 4]);
+      t.deepEqual(result, [2, 4]);
     });
 });
 

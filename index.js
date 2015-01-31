@@ -66,7 +66,6 @@ Prat.prototype.filter = function (opts, fn) {
 
   return this.map(opts, function (item) {
     return Bluebird.resolve(fn(item)).then(function (keep) {
-      console.log('keep', keep, 'item', item);
       if (keep) {
         return item;
       }
