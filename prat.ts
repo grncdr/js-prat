@@ -82,7 +82,10 @@ class Prat<T> extends stream.Transform implements stream.Readable, events.EventE
         return stream.pipe(idStream);
     }
 
-    static reduce <U> (stream: stream.Readable, init: U, fn: (memo: U, chunk: any) => U | Promise<U>) : Promise<U> {
+    static reduce <U> (stream: stream.Readable,
+                       init: U,
+                       fn: (memo: U, chunk: any) => U | Promise<U>)
+    : Promise<U> {
         var promise = Bluebird.resolve(init);
 
         function step () {
@@ -103,30 +106,47 @@ class Prat<T> extends stream.Transform implements stream.Readable, events.EventE
         });
     }
 
-    map<U>(opts: Opts, fn: (it: T) => U | Promise<U>): Prat<U> {
-        return this.pipe(new Prat<U>(opts, fn));
+    static map <U> (stream: stream.Readable, opts: Opts, fn: (it) => U | Promise<U>) : Prat<U> {
+        var out = new Prat(opts, fn);
+        stream.on('error', out.emit.bind(out, 'error'));
+        return stream.pipe(out);
     }
 
-    filter(opts, fn: (it: T) => boolean|Promise<boolean>) : Prat<T> {
+    static filter <U> (stream: stream.Readable, opts: Opts, fn: (it) => boolean|Promise<boolean>) : Prat<U> {
         if (typeof opts === 'function') {
-            fn = opts;
+            fn = <(x) => boolean|Promise<boolean>> opts;
             opts = {};
         }
 
-        return this.map(opts, function(item) {
-            return Bluebird.resolve(fn(item)).then(function(keep) {
-                if (keep) {
-                    return item;
-                }
-            });
+        return this.map<U>(stream, opts, function (item) {
+            var keep = fn(item);
+            if (!keep) {
+                return;
+            }
+            if (typeof keep === 'object' && typeof keep.then === 'function') {
+                return keep.then(function (keep) {
+                    if (keep) {
+                        return item
+                    }
+                });
+            }
+            return item;
         });
     }
 
-    reduce<U>(init: U, fn: (memo: U, it: T) => U | Promise<U>) {
+    map <U> (opts: Opts, fn: (it: T) => U | Promise<U>): Prat<U> {
+        return Prat.map<U>(this, opts, fn);
+    }
+
+    filter (opts, fn: (it: T) => boolean|Promise<boolean>) : Prat<T> {
+        return Prat.filter<T>(this, opts, fn);
+    }
+
+    reduce <U> (init: U, fn: (memo: U, it: T) => U | Promise<U>) {
         return Prat.reduce(this, init, fn);
     }
 
-    _transform(value, encoding, callback) {
+    _transform (value, encoding, callback) {
         var self = this;
         var state = getState(self);
 
@@ -151,27 +171,23 @@ class Prat<T> extends stream.Transform implements stream.Readable, events.EventE
     }
 
 
-    _flush(cb) {
+    _flush (cb) {
         var self = this;
         var state = getState(self);
 
         if (state.promises.length) {
-            state.flushCallback = cleanup;
+            state.flushCallback = cb;
         } else {
-            cleanup(null);
-        }
-
-        function cleanup(err) {
-            cb(err);
+            cb(null);
         }
     }
 }
 
-function getState<T>(stream: Prat<T>): State<T> {
+function getState <T> (stream: Prat<T>): State<T> {
     return <State<T>> stream[STATE];
 }
 
-function handleSettled<T>(stream: Prat<T>) {
+function handleSettled <T> (stream: Prat<T>) {
     var state = getState(stream);
     var promises = state.promises;
 

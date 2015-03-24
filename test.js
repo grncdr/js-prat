@@ -91,6 +91,17 @@ test('Prat#filter', function (t) {
     })
 })
 
+test('Prat#filter (async)', function (t) {
+  return prat.ify(from.obj([1, 2, 3, 4, 5]))
+    .filter({concurrency: 10}, function (n) {
+      return Bluebird.resolve(n % 2 === 0).delay(100)
+    })
+    .reduce([], append)
+    .then(function (result) {
+      t.deepEqual(result, [2, 4])
+    })
+})
+
 test('prat.ctor', function (t) {
   var tripler = prat.ctor(function (v) {
     return Bluebird.resolve(v * 3)
