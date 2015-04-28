@@ -4,9 +4,6 @@ import stream = require('stream')
 import Bluebird = require('bluebird');
 import events = require('events');
 
-var inherits = <(c: Function, p: Function) => c> require('inherits');
-
-
 /* istanbul ignore next */
 var STATE = typeof Symbol === 'undefined' ? '@@pratState' : new Symbol('pratState');
 
